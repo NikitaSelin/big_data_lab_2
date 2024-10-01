@@ -14,6 +14,7 @@ import time
 import traceback
 import yaml
 
+from db import PostgresDB
 from logger import Logger
 
 SHOW_LOG = True
@@ -45,6 +46,10 @@ class Predictor():
                                  const="smoke",
                                  nargs="?",
                                  choices=["smoke", "func"])
+        self.dbname = self.config["DATABASE"]["dbname"]
+        self.user = self.config["DATABASE"]["user"]
+        self.password = self.config["DATABASE"]["password"]
+        self.db = PostgresDB(self.dbname, self.user, self.password)
         self.X_train = pd.read_csv(
             self.config["SPLIT_DATA"]["X_train"], index_col=0)
         self.y_train = pd.read_csv(
@@ -85,11 +90,16 @@ class Predictor():
                 with open(os.path.join(tests_path, test)) as f:
                     try:
                         data = json.load(f)
+                        round = str(data["X"][0]["Round"])
+                        air_date_group = str(data["X"][0]["air_date_group"])
+                        question = str(data["X"][0]["Question"])
                         X = self.column_trans.transform(
                             pd.json_normalize(data, record_path=['X']))
                         y = pd.json_normalize(data, record_path=['y'])
                         score = classifier.score(X, y)
+                        prediction = classifier.predict(X)
                         print(f'{args.model} has {score} score')
+                        self.db.insert_data(round, air_date_group, question, int(prediction))
                     except Exception:
                         self.log.error(traceback.format_exc())
                         sys.exit(1)
@@ -111,6 +121,7 @@ class Predictor():
                         yaml.safe_dump(exp_data, exp_f, sort_keys=False)
                     shutil.copy(os.path.join(os.getcwd(), "logfile.log"), os.path.join(exp_dir,"exp_logfile.log"))
                     shutil.copy(self.config[args.model]["path"], os.path.join(exp_dir,f'exp_{args.model}.sav'))
+            self.db.close()
         return True
 
 
