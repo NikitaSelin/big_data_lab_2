@@ -50,6 +50,7 @@ class Predictor():
         self.user = self.config["DATABASE"]["user"]
         self.password = self.config["DATABASE"]["password"]
         self.db = PostgresDB(self.dbname, self.user, self.password)
+        self.db.create_table()
         self.X_train = pd.read_csv(
             self.config["SPLIT_DATA"]["X_train"], index_col=0)
         self.y_train = pd.read_csv(
