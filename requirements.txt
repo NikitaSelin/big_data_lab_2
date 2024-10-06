@@ -5,3 +5,4 @@ pyyaml
 nltk
 numpy
 coverage
+psycopg2-binary
